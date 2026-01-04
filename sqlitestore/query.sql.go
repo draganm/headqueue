@@ -9,8 +9,18 @@ import (
 	"context"
 )
 
+const deleteBlocksBeforeIncluding = `-- name: DeleteBlocksBeforeIncluding :exec
+DELETE FROM blocks WHERE id <= ?
+`
+
+func (q *Queries) DeleteBlocksBeforeIncluding(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteBlocksBeforeIncluding, id)
+	return err
+}
+
 const getBlockCount = `-- name: GetBlockCount :one
-SELECT COUNT(*) FROM blocks
+SELECT COUNT(*)
+FROM blocks
 `
 
 func (q *Queries) GetBlockCount(ctx context.Context) (int64, error) {
@@ -20,8 +30,67 @@ func (q *Queries) GetBlockCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const getBlocksAfter = `-- name: GetBlocksAfter :many
+SELECT id,
+    number,
+    hash,
+    parent,
+    block,
+    receipts,
+    call_traces,
+    prestate_traces,
+    keccak256_preimage_traces,
+    state_access_traces
+FROM blocks
+WHERE id > ?
+`
+
+func (q *Queries) GetBlocksAfter(ctx context.Context, id int64) ([]Block, error) {
+	rows, err := q.db.QueryContext(ctx, getBlocksAfter, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Block
+	for rows.Next() {
+		var i Block
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.Hash,
+			&i.Parent,
+			&i.Block,
+			&i.Receipts,
+			&i.CallTraces,
+			&i.PrestateTraces,
+			&i.Keccak256PreimageTraces,
+			&i.StateAccessTraces,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertBlock = `-- name: InsertBlock :exec
-INSERT INTO blocks (number, hash, parent, block, receipts, call_traces, prestate_traces, keccak256_preimage_traces, state_access_traces)
+INSERT INTO blocks (
+        number,
+        hash,
+        parent,
+        block,
+        receipts,
+        call_traces,
+        prestate_traces,
+        keccak256_preimage_traces,
+        state_access_traces
+    )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
