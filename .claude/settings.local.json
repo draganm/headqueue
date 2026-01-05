@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(nix develop:*)",
-      "Bash(direnv allow:*)"
+      "Bash(direnv allow:*)",
+      "Bash(go get:*)",
+      "Bash(go test:*)"
     ]
   }
 }
