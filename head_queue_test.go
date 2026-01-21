@@ -12,21 +12,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const schema = `
-CREATE TABLE IF NOT EXISTS blocks (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    number BIGINT,
-    hash BLOB NOT NULL,
-    parent BLOB NOT NULL,
-    block BLOB,
-    receipts BLOB,
-    call_traces BLOB,
-    prestate_traces BLOB,
-    keccak256_preimage_traces BLOB,
-    state_access_traces BLOB
-);
-`
-
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -37,17 +22,21 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("failed to open database: %v", err)
 	}
 
-	_, err = db.Exec(schema)
-	if err != nil {
-		db.Close()
-		t.Fatalf("failed to create schema: %v", err)
-	}
-
 	t.Cleanup(func() {
 		db.Close()
 	})
 
 	return db
+}
+
+func setupTestQueue(t *testing.T, maxBlocks int) (*sql.DB, *HeadQueue) {
+	t.Helper()
+	db := setupTestDB(t)
+	hq, err := NewHeadQueue(db, maxBlocks)
+	if err != nil {
+		t.Fatalf("failed to create HeadQueue: %v", err)
+	}
+	return db, hq
 }
 
 func createTestBlock(number int64) *sqlitestore.Block {
@@ -68,7 +57,10 @@ func TestNewHeadQueue(t *testing.T) {
 	db := setupTestDB(t)
 	maxBlocks := 10
 
-	hq := NewHeadQueue(db, maxBlocks)
+	hq, err := NewHeadQueue(db, maxBlocks)
+	if err != nil {
+		t.Fatalf("NewHeadQueue failed: %v", err)
+	}
 
 	if hq == nil {
 		t.Fatal("NewHeadQueue returned nil")
@@ -82,8 +74,7 @@ func TestNewHeadQueue(t *testing.T) {
 }
 
 func TestEnqueue_SingleBlock(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	_, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	block := createTestBlock(1)
@@ -110,8 +101,7 @@ func TestEnqueue_SingleBlock(t *testing.T) {
 }
 
 func TestEnqueue_MultipleBlocks(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	_, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	for i := int64(1); i <= 5; i++ {
@@ -140,8 +130,7 @@ func TestEnqueue_MultipleBlocks(t *testing.T) {
 }
 
 func TestPeekQueue_EmptyQueue(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	_, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	blocks, err := hq.PeekQueue(ctx, 0)
@@ -155,8 +144,7 @@ func TestPeekQueue_EmptyQueue(t *testing.T) {
 }
 
 func TestPeekQueue_WithLastID(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	_, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	for i := int64(1); i <= 5; i++ {
@@ -187,8 +175,7 @@ func TestPeekQueue_WithLastID(t *testing.T) {
 }
 
 func TestDropTail(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	_, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	for i := int64(1); i <= 5; i++ {
@@ -224,8 +211,7 @@ func TestDropTail(t *testing.T) {
 }
 
 func TestEnqueue_BackpressureBlocking(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 2)
+	_, hq := setupTestQueue(t, 2)
 	ctx := context.Background()
 
 	// Fill the queue
@@ -290,8 +276,7 @@ func TestEnqueue_BackpressureBlocking(t *testing.T) {
 }
 
 func TestEnqueue_ContextCancellation(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 1)
+	_, hq := setupTestQueue(t, 1)
 	ctx := context.Background()
 
 	// Fill the queue
@@ -333,8 +318,7 @@ func TestEnqueue_ContextCancellation(t *testing.T) {
 }
 
 func TestEnqueue_RetryOnDatabaseLocked(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	db, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	// Start a long-running transaction to lock the database
@@ -402,8 +386,7 @@ func TestEnqueue_RetryOnDatabaseLocked(t *testing.T) {
 }
 
 func TestPeekQueue_RetryOnDatabaseLocked(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	db, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	// Insert a block first
@@ -465,8 +448,7 @@ func TestPeekQueue_RetryOnDatabaseLocked(t *testing.T) {
 }
 
 func TestDropTail_RetryOnDatabaseLocked(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	db, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	// Insert blocks
@@ -546,8 +528,7 @@ func TestDropTail_RetryOnDatabaseLocked(t *testing.T) {
 }
 
 func TestDropTail_ContextCancellationDuringRetry(t *testing.T) {
-	db := setupTestDB(t)
-	hq := NewHeadQueue(db, 10)
+	db, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
 	// Insert blocks
