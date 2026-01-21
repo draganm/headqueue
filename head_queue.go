@@ -3,12 +3,16 @@ package headqueue
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"errors"
 	"strings"
 	"time"
 
 	"github.com/draganm/headqueue/sqlitestore"
 )
+
+//go:embed sqlitestore/schema.sql
+var schema string
 
 type HeadQueue struct {
 	db        *sql.DB
@@ -18,11 +22,16 @@ type HeadQueue struct {
 func NewHeadQueue(
 	db *sql.DB,
 	maxBlocks int,
-) *HeadQueue {
+) (*HeadQueue, error) {
+	_, err := db.Exec(schema)
+	if err != nil {
+		return nil, err
+	}
+
 	return &HeadQueue{
 		db:        db,
 		maxBlocks: maxBlocks,
-	}
+	}, nil
 }
 
 var ErrMaxBlocksBuffered = errors.New("max blocks buffered")
