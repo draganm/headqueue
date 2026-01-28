@@ -6,7 +6,7 @@ package sqlitestore
 
 type Block struct {
 	ID                      int64  `json:"id"`
-	Number                  int64  `json:"number"`
+	Number                  *int64 `json:"number"`
 	Hash                    []byte `json:"hash"`
 	Parent                  []byte `json:"parent"`
 	Block                   []byte `json:"block"`

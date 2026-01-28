@@ -24,7 +24,8 @@ SELECT id,
     keccak256_preimage_traces,
     state_access_traces
 FROM blocks
-WHERE id > ?;
+WHERE id > ?
+LIMIT ?;
 
 -- name: GetBlockCount :one
 SELECT COUNT(*)

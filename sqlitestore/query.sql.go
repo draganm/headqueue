@@ -43,10 +43,16 @@ SELECT id,
     state_access_traces
 FROM blocks
 WHERE id > ?
+LIMIT ?
 `
 
-func (q *Queries) GetBlocksAfter(ctx context.Context, id int64) ([]Block, error) {
-	rows, err := q.db.QueryContext(ctx, getBlocksAfter, id)
+type GetBlocksAfterParams struct {
+	ID    int64 `json:"id"`
+	Limit int64 `json:"limit"`
+}
+
+func (q *Queries) GetBlocksAfter(ctx context.Context, arg GetBlocksAfterParams) ([]Block, error) {
+	rows, err := q.db.QueryContext(ctx, getBlocksAfter, arg.ID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +101,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertBlockParams struct {
-	Number                  int64  `json:"number"`
+	Number                  *int64 `json:"number"`
 	Hash                    []byte `json:"hash"`
 	Parent                  []byte `json:"parent"`
 	Block                   []byte `json:"block"`

@@ -97,11 +97,16 @@ func (hq *HeadQueue) Enqueue(ctx context.Context, block *sqlitestore.Block) erro
 	}
 }
 
-func (hq *HeadQueue) PeekQueue(ctx context.Context, lastID int64) ([]sqlitestore.Block, error) {
+func (hq *HeadQueue) PeekQueue(ctx context.Context, lastID int64, limit int64) ([]sqlitestore.Block, error) {
 	queries := sqlitestore.New(hq.db)
 
 	for {
-		blocks, err := queries.GetBlocksAfter(ctx, int64(lastID))
+		blocks, err := queries.GetBlocksAfter(
+			ctx, sqlitestore.GetBlocksAfterParams{
+				ID:    lastID,
+				Limit: limit,
+			})
+
 		switch {
 		case err != nil && strings.Contains(err.Error(), "database is locked"):
 			select {
@@ -110,6 +115,8 @@ func (hq *HeadQueue) PeekQueue(ctx context.Context, lastID int64) ([]sqlitestore
 			case <-time.After(1 * time.Second):
 				continue
 			}
+		case err != nil:
+			return nil, err
 		default:
 			return blocks, nil
 		}

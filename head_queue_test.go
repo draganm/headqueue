@@ -41,7 +41,7 @@ func setupTestQueue(t *testing.T, maxBlocks int) (*sql.DB, *HeadQueue) {
 
 func createTestBlock(number int64) *sqlitestore.Block {
 	return &sqlitestore.Block{
-		Number:                  number,
+		Number:                  &number,
 		Hash:                    []byte(fmt.Sprintf("hash-%d", number)),
 		Parent:                  []byte(fmt.Sprintf("parent-%d", number)),
 		Block:                   []byte(fmt.Sprintf("block-%d", number)),
@@ -83,7 +83,7 @@ func TestEnqueue_SingleBlock(t *testing.T) {
 		t.Fatalf("Enqueue failed: %v", err)
 	}
 
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -92,8 +92,8 @@ func TestEnqueue_SingleBlock(t *testing.T) {
 		t.Fatalf("expected 1 block, got %d", len(blocks))
 	}
 
-	if blocks[0].Number != block.Number {
-		t.Errorf("block number = %d, want %d", blocks[0].Number, block.Number)
+	if *blocks[0].Number != *block.Number {
+		t.Errorf("block number = %d, want %d", *blocks[0].Number, *block.Number)
 	}
 	if string(blocks[0].Hash) != string(block.Hash) {
 		t.Errorf("block hash = %s, want %s", blocks[0].Hash, block.Hash)
@@ -112,7 +112,7 @@ func TestEnqueue_MultipleBlocks(t *testing.T) {
 		}
 	}
 
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -123,8 +123,8 @@ func TestEnqueue_MultipleBlocks(t *testing.T) {
 
 	for i, block := range blocks {
 		expectedNumber := int64(i + 1)
-		if block.Number != expectedNumber {
-			t.Errorf("block[%d].Number = %d, want %d", i, block.Number, expectedNumber)
+		if *block.Number != expectedNumber {
+			t.Errorf("block[%d].Number = %d, want %d", i, *block.Number, expectedNumber)
 		}
 	}
 }
@@ -133,7 +133,7 @@ func TestPeekQueue_EmptyQueue(t *testing.T) {
 	_, hq := setupTestQueue(t, 10)
 	ctx := context.Background()
 
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -156,7 +156,7 @@ func TestPeekQueue_WithLastID(t *testing.T) {
 	}
 
 	// Get blocks after ID 2 (should return blocks with ID 3, 4, 5)
-	blocks, err := hq.PeekQueue(ctx, 2)
+	blocks, err := hq.PeekQueue(ctx, 2, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -192,7 +192,7 @@ func TestDropTail(t *testing.T) {
 		t.Fatalf("DropTail failed: %v", err)
 	}
 
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -265,7 +265,7 @@ func TestEnqueue_BackpressureBlocking(t *testing.T) {
 	}
 
 	// Verify we have 3 blocks now (IDs 2, 3, and the new one)
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestEnqueue_RetryOnDatabaseLocked(t *testing.T) {
 	}
 
 	// Verify the block was inserted
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
@@ -417,7 +417,7 @@ func TestPeekQueue_RetryOnDatabaseLocked(t *testing.T) {
 	eg.Go(func() error {
 		close(peekStarted)
 		var err error
-		peekResult, err = hq.PeekQueue(ctx, 0)
+		peekResult, err = hq.PeekQueue(ctx, 0, 100)
 		close(peekDone)
 		return err
 	})
@@ -513,7 +513,7 @@ func TestDropTail_RetryOnDatabaseLocked(t *testing.T) {
 	}
 
 	// Verify only block 3 remains
-	blocks, err := hq.PeekQueue(ctx, 0)
+	blocks, err := hq.PeekQueue(ctx, 0, 100)
 	if err != nil {
 		t.Fatalf("PeekQueue failed: %v", err)
 	}
