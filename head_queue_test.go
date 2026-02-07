@@ -41,15 +41,10 @@ func setupTestQueue(t *testing.T, maxBlocks int) (*sql.DB, *HeadQueue) {
 
 func createTestBlock(number int64) *sqlitestore.Block {
 	return &sqlitestore.Block{
-		Number:                  &number,
-		Hash:                    []byte(fmt.Sprintf("hash-%d", number)),
-		Parent:                  []byte(fmt.Sprintf("parent-%d", number)),
-		Block:                   []byte(fmt.Sprintf("block-%d", number)),
-		Receipts:                []byte(fmt.Sprintf("receipts-%d", number)),
-		CallTraces:              []byte(fmt.Sprintf("call-traces-%d", number)),
-		PrestateTraces:          []byte(fmt.Sprintf("prestate-traces-%d", number)),
-		Keccak256PreimageTraces: []byte(fmt.Sprintf("keccak256-preimage-traces-%d", number)),
-		StateAccessTraces:       []byte(fmt.Sprintf("state-access-traces-%d", number)),
+		Number:  &number,
+		Hash:    []byte(fmt.Sprintf("hash-%d", number)),
+		Parent:  []byte(fmt.Sprintf("parent-%d", number)),
+		Payload: []byte(fmt.Sprintf("payload-%d", number)),
 	}
 }
 
