@@ -3,26 +3,16 @@ INSERT INTO blocks (
         number,
         hash,
         parent,
-        block,
-        receipts,
-        call_traces,
-        prestate_traces,
-        keccak256_preimage_traces,
-        state_access_traces
+        payload
     )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?);
 
 -- name: GetBlocksAfter :many
 SELECT id,
     number,
     hash,
     parent,
-    block,
-    receipts,
-    call_traces,
-    prestate_traces,
-    keccak256_preimage_traces,
-    state_access_traces
+    payload
 FROM blocks
 WHERE id > ?
 LIMIT ?;

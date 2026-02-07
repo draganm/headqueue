@@ -60,15 +60,10 @@ func (hq *HeadQueue) Enqueue(ctx context.Context, block *sqlitestore.Block) erro
 
 			queries := sqlitestore.New(tx)
 			err = queries.InsertBlock(ctx, sqlitestore.InsertBlockParams{
-				Number:                  block.Number,
-				Hash:                    block.Hash,
-				Parent:                  block.Parent,
-				Block:                   block.Block,
-				Receipts:                block.Receipts,
-				CallTraces:              block.CallTraces,
-				PrestateTraces:          block.PrestateTraces,
-				Keccak256PreimageTraces: block.Keccak256PreimageTraces,
-				StateAccessTraces:       block.StateAccessTraces,
+				Number:  block.Number,
+				Hash:    block.Hash,
+				Parent:  block.Parent,
+				Payload: block.Payload,
 			})
 			if err != nil {
 				return err

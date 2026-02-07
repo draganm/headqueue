@@ -35,12 +35,7 @@ SELECT id,
     number,
     hash,
     parent,
-    block,
-    receipts,
-    call_traces,
-    prestate_traces,
-    keccak256_preimage_traces,
-    state_access_traces
+    payload
 FROM blocks
 WHERE id > ?
 LIMIT ?
@@ -65,12 +60,7 @@ func (q *Queries) GetBlocksAfter(ctx context.Context, arg GetBlocksAfterParams) 
 			&i.Number,
 			&i.Hash,
 			&i.Parent,
-			&i.Block,
-			&i.Receipts,
-			&i.CallTraces,
-			&i.PrestateTraces,
-			&i.Keccak256PreimageTraces,
-			&i.StateAccessTraces,
+			&i.Payload,
 		); err != nil {
 			return nil, err
 		}
@@ -90,26 +80,16 @@ INSERT INTO blocks (
         number,
         hash,
         parent,
-        block,
-        receipts,
-        call_traces,
-        prestate_traces,
-        keccak256_preimage_traces,
-        state_access_traces
+        payload
     )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?)
 `
 
 type InsertBlockParams struct {
-	Number                  *int64 `json:"number"`
-	Hash                    []byte `json:"hash"`
-	Parent                  []byte `json:"parent"`
-	Block                   []byte `json:"block"`
-	Receipts                []byte `json:"receipts"`
-	CallTraces              []byte `json:"call_traces"`
-	PrestateTraces          []byte `json:"prestate_traces"`
-	Keccak256PreimageTraces []byte `json:"keccak256_preimage_traces"`
-	StateAccessTraces       []byte `json:"state_access_traces"`
+	Number  *int64 `json:"number"`
+	Hash    []byte `json:"hash"`
+	Parent  []byte `json:"parent"`
+	Payload []byte `json:"payload"`
 }
 
 func (q *Queries) InsertBlock(ctx context.Context, arg InsertBlockParams) error {
@@ -117,12 +97,7 @@ func (q *Queries) InsertBlock(ctx context.Context, arg InsertBlockParams) error 
 		arg.Number,
 		arg.Hash,
 		arg.Parent,
-		arg.Block,
-		arg.Receipts,
-		arg.CallTraces,
-		arg.PrestateTraces,
-		arg.Keccak256PreimageTraces,
-		arg.StateAccessTraces,
+		arg.Payload,
 	)
 	return err
 }
